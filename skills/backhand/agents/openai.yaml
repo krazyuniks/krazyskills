@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backhand"
+  short_description: "Write compact session handoffs"
+  default_prompt: "Use $backhand to write a handoff before I clear this session."

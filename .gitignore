@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# uv
+.uv/
+
+# agent-sync generated (if this repo is ever synced into)
+.gemini/
+.agents/
+
+# local
+*.local
+.DS_Store

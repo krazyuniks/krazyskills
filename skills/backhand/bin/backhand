@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# backhand preflight + launcher.
+# Checks prerequisites, then runs the CLI via uv. Never installs anything; never uses sudo.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+fail() { printf 'backhand: %s\n' "$1" >&2; exit 1; }
+
+command -v uv >/dev/null 2>&1 || fail \
+  "uv is required. Install: curl -LsSf https://astral.sh/uv/install.sh | sh  (see https://docs.astral.sh/uv/). Do not run sudo."
+
+# tmux is only needed for the tmux backend; note but do not hard-fail.
+if ! command -v tmux >/dev/null 2>&1; then
+  printf 'backhand: note - tmux not found; the tmux backend is unavailable.\n' >&2
+fi
+
+exec uv run --project "$here" backhand "$@"
