@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
+from backhand import cli
 from backhand.adapters.sources.claude_jsonl import ClaudeJsonlSource, compact_middle_text
+from backhand.adapters.summarisers.api import ApiBackend
+from backhand.adapters.summarisers.subagent import SubagentBackend
 from backhand.adapters.summarisers.tmux import TmuxBackend, find_tmux_dispatch
 from backhand.app.service import HandoffService
 from backhand.config import Config
@@ -267,6 +270,100 @@ def test_tmux_dispatch_resolves_from_env(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("BACKHAND_TMUX_DISPATCH", "/bin/sh")
 
     assert find_tmux_dispatch() == "/bin/sh"
+
+
+def test_tmux_dispatch_has_no_private_path_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("BACKHAND_TMUX_DISPATCH", raising=False)
+    monkeypatch.setenv("PATH", "/tmp/backhand-empty-path")
+
+    assert find_tmux_dispatch() is None
+
+
+def test_planned_backends_raise_explicit_contract_errors() -> None:
+    with pytest.raises(NotImplementedError, match="metered model API"):
+        ApiBackend().summarise_middle("/tmp/transcript.jsonl")
+
+    with pytest.raises(NotImplementedError, match="host Claude session"):
+        SubagentBackend().summarise_middle("/tmp/transcript.jsonl")
+
+
+def test_cli_handoff_wires_overrides(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class FakeSource(SessionSource):
+        tool = "fake-tool"
+
+        def resolve(self, first_prompt_hint: str | None = None) -> ResolvedSession:
+            assert first_prompt_hint == "original ask"
+            return ResolvedSession(
+                tool="fake-tool",
+                transcript_path="/tmp/transcript.jsonl",
+                head="original ask",
+                tail="current state",
+                title="CLI handoff",
+            )
+
+    class FakeSummariser(SummariserBackend):
+        name = "fake-backend"
+
+        def summarise_middle(
+            self, transcript_path: str, *, profile: str | None = None
+        ) -> list[ThreadItem]:
+            assert transcript_path == "/tmp/transcript.jsonl"
+            assert profile == "strong-model"
+            return [ThreadItem(kind=ItemKind.open, statement="Continue from CLI")]
+
+    captured_config: Config | None = None
+
+    def fake_make_source(tool: str) -> SessionSource:
+        assert tool == "claude-code"
+        return FakeSource()
+
+    def fake_make_backend(config: Config) -> SummariserBackend:
+        nonlocal captured_config
+        captured_config = config
+        return FakeSummariser()
+
+    monkeypatch.setattr(cli.Config, "load", classmethod(lambda cls: Config(storage_dir=tmp_path)))
+    monkeypatch.setattr(cli, "_make_source", fake_make_source)
+    monkeypatch.setattr(cli, "_make_backend", fake_make_backend)
+
+    result = cli.main(
+        [
+            "handoff",
+            "--focus",
+            "next slice",
+            "--first-prompt-hint",
+            "original ask",
+            "--backend",
+            "tmux",
+            "--profile",
+            "strong-model",
+            "--tmux-dispatch-path",
+            "/opt/tmux-dispatch",
+            "--tmux-harness",
+            "codex",
+            "--tmux-effort",
+            "high",
+            "--timeout",
+            "1200",
+        ]
+    )
+
+    assert result == 0
+    assert captured_config == Config(
+        storage_dir=tmp_path,
+        backend="tmux",
+        default_profile="strong-model",
+        tmux_dispatch_path="/opt/tmux-dispatch",
+        tmux_harness="codex",
+        tmux_effort="high",
+        tmux_timeout_s=1200,
+    )
+    output_path = Path(capsys.readouterr().out.strip())
+    assert output_path.parent == tmp_path
+    assert output_path.name.endswith("-cli-handoff.md")
+    assert "Continue from CLI" in output_path.read_text(encoding="utf-8")
 
 
 def test_compact_middle_excludes_head_tail_and_tool_results(tmp_path: Path) -> None:
