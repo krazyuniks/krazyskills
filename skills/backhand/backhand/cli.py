@@ -24,14 +24,14 @@ def _make_backend(config: Config) -> SummariserBackend:
         from .adapters.summarisers.subagent import SubagentBackend
 
         return SubagentBackend()
-    if config.backend == "tmux":
-        from .adapters.summarisers.tmux import TmuxBackend
+    if config.backend == "herdr":
+        from .adapters.summarisers.herdr import HerdrBackend
 
-        return TmuxBackend(
-            dispatch_path=config.tmux_dispatch_path,
-            harness=config.tmux_harness,
-            effort=config.tmux_effort,
-            timeout_s=config.tmux_timeout_s,
+        return HerdrBackend(
+            dispatch_path=config.harness_dispatch_path,
+            harness=config.harness_profile,
+            effort=config.harness_effort,
+            timeout_s=config.harness_timeout_s,
         )
     if config.backend == "api":
         from .adapters.summarisers.api import ApiBackend
@@ -52,10 +52,10 @@ def cmd_handoff(args: argparse.Namespace) -> int:
         {
             "backend": args.backend,
             "default_profile": args.profile,
-            "tmux_dispatch_path": args.tmux_dispatch_path,
-            "tmux_harness": args.tmux_harness,
-            "tmux_effort": args.tmux_effort,
-            "tmux_timeout_s": args.timeout,
+            "harness_dispatch_path": args.harness_dispatch_path,
+            "harness_profile": args.harness_profile,
+            "harness_effort": args.harness_effort,
+            "harness_timeout_s": args.timeout,
         },
     )
     service = HandoffService(_make_source(args.tool), _make_backend(config), config)
@@ -97,9 +97,9 @@ def main(argv: list[str] | None = None) -> int:
         help="summariser backend",
     )
     ph.add_argument("--tool", default="claude-code", help="host agent tool")
-    ph.add_argument("--tmux-dispatch-path", help="path to tmux-dispatch")
-    ph.add_argument("--tmux-harness", help="tmux-dispatch harness name")
-    ph.add_argument("--tmux-effort", help="tmux-dispatch effort override")
+    ph.add_argument("--harness-dispatch-path", help="path to harness-dispatch")
+    ph.add_argument("--harness-profile", help="harness-dispatch profile name")
+    ph.add_argument("--harness-effort", help="harness-dispatch effort override")
     ph.add_argument("--timeout", type=int, help="backend completion timeout in seconds")
     ph.set_defaults(func=cmd_handoff)
 

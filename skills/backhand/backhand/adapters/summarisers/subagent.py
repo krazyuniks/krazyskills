@@ -22,5 +22,5 @@ class SubagentBackend(SummariserBackend):
         raise NotImplementedError(
             "The subagent backend is driven by the host Claude session, which spawns a "
             "summariser subagent (model=profile) to read the transcript and return items. "
-            "It is not callable from a standalone process; use the tmux or api backend for that."
+            "It is not callable from a standalone process; use the herdr or api backend for that."
         )

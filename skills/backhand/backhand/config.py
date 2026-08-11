@@ -9,7 +9,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-BackendName = Literal["subagent", "tmux", "api"]
+BackendName = Literal["subagent", "herdr", "api"]
 
 
 class Config(BaseModel):
@@ -19,11 +19,11 @@ class Config(BaseModel):
 
     storage_dir: Path = Field(default_factory=lambda: Path("~/.backhand/handoffs").expanduser())
     default_profile: str | None = None
-    backend: BackendName = "tmux"
-    tmux_dispatch_path: str | None = None
-    tmux_harness: str = "codex"
-    tmux_effort: str | None = None
-    tmux_timeout_s: int = Field(default=900, ge=30)
+    backend: BackendName = "herdr"
+    harness_dispatch_path: str | None = None
+    harness_profile: str = "codex"
+    harness_effort: str | None = None
+    harness_timeout_s: int = Field(default=900, ge=30)
 
     @classmethod
     def load(cls, path: Path | None = None) -> Config:

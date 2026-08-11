@@ -8,7 +8,7 @@ from ..domain.models import ThreadItem
 
 
 class SummariserBackend(ABC):
-    """Produces the typed middle-zone items. Implementations: subagent, tmux, api."""
+    """Produces the typed middle-zone items. Implementations: subagent, herdr, api."""
 
     name: str = "unknown"
 

@@ -9,7 +9,7 @@ The installable surface is `skills/`. Each child directory is a self-contained s
 
 | Skill | Status | What it does |
 |---|---|---|
-| `backhand` | Working first slice | Writes a compact handoff from a Claude Code session transcript, with deterministic head/tail extraction and model-written middle synthesis through an external `tmux-dispatch` command. |
+| `backhand` | Working first slice | Writes a compact handoff from a Claude Code session transcript, with deterministic head/tail extraction and model-written middle synthesis through an external `harness-dispatch` command. |
 
 Planned backhand adapters for Codex, Pi, Gemini, and a metered API backend are tracked as GitHub
 issues rather than hidden behind vague README promises.
@@ -52,12 +52,12 @@ Backhand uses Python through `uv`.
 uv --version
 ```
 
-The current working backend also needs `tmux` and a `tmux-dispatch` command from a compatible
-tmux-harness installation. Backhand resolves `tmux-dispatch` from this order:
+The current working backend also needs `herdr` and a `harness-dispatch` command from a compatible
+herdr-harness installation. Backhand resolves `harness-dispatch` from this order:
 
-1. `--tmux-dispatch-path`
-2. `tmux_dispatch_path` in `~/.backhand/config.toml`
-3. `BACKHAND_TMUX_DISPATCH`
+1. `--harness-dispatch-path`
+2. `harness_dispatch_path` in `~/.backhand/config.toml`
+3. `BACKHAND_HARNESS_DISPATCH`
 4. `PATH`
 
 Backhand checks local prerequisites and prints the missing command; it does not install packages or
@@ -75,7 +75,7 @@ Use $backhand to write a handoff for the next session: finish the README and pub
 ### Use from a shell
 
 ```bash
-"$HOME/src/krazyskills/skills/backhand/bin/backhand" handoff --focus "finish the README and publish the repo" --first-prompt-hint "I've just created a new repo" --backend tmux
+"$HOME/src/krazyskills/skills/backhand/bin/backhand" handoff --focus "finish the README and publish the repo" --first-prompt-hint "I've just created a new repo" --backend herdr
 ```
 
 The command prints the handoff path. You decide when to clear the old session.
@@ -86,12 +86,12 @@ Optional config lives at `~/.backhand/config.toml`.
 
 ```toml
 storage_dir = "~/.backhand/handoffs"
-backend = "tmux"
-tmux_dispatch_path = "/path/to/tmux-dispatch"
-tmux_harness = "codex"
+backend = "herdr"
+harness_dispatch_path = "/path/to/harness-dispatch"
+harness_profile = "codex"
 default_profile = "gpt-5.5"
-tmux_effort = "high"
-tmux_timeout_s = 900
+harness_effort = "high"
+harness_timeout_s = 900
 ```
 
 ## Development
@@ -109,5 +109,5 @@ The Python code follows a ports-and-adapters shape:
 
 - `domain/` contains Pydantic models and pure rendering.
 - `ports/` defines session-source and summariser contracts.
-- `adapters/` holds Claude JSONL and tmux-dispatch integration code.
+- `adapters/` holds Claude JSONL and harness-dispatch integration code.
 - `app/` wires the use case without importing concrete adapters.

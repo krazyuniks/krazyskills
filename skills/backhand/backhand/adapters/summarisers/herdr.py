@@ -1,8 +1,8 @@
-"""tmux backend: dispatch the middle-synthesis to a chosen harness via tmux-dispatch.
+"""herdr backend: dispatch the middle-synthesis to a chosen harness via harness-dispatch.
 
-Thin adapter over the `tmux-dispatch` CLI provided by the tmux-harness skill - backhand does
-not reimplement tmux orchestration. The command is resolved from explicit config, the
-`BACKHAND_TMUX_DISPATCH` environment variable, or `PATH`.
+Thin adapter over the `harness-dispatch` CLI provided by the herdr-harness skill - backhand does
+not reimplement herdr orchestration. The command is resolved from explicit config, the
+`BACKHAND_HARNESS_DISPATCH` environment variable, or `PATH`.
 """
 
 from __future__ import annotations
@@ -37,24 +37,24 @@ class Runner(Protocol):
     ) -> subprocess.CompletedProcess[str]: ...
 
 
-def find_tmux_dispatch(explicit_path: str | None = None) -> str | None:
-    for candidate in (explicit_path, os.environ.get("BACKHAND_TMUX_DISPATCH")):
+def find_harness_dispatch(explicit_path: str | None = None) -> str | None:
+    for candidate in (explicit_path, os.environ.get("BACKHAND_HARNESS_DISPATCH")):
         if candidate:
             expanded = os.path.expanduser(candidate)
             if os.path.isfile(expanded) and os.access(expanded, os.X_OK):
                 return expanded
-    which = shutil.which("tmux-dispatch")
+    which = shutil.which("harness-dispatch")
     if which:
         return which
     for path_dir in os.get_exec_path():
-        candidate = os.path.join(path_dir, "tmux-dispatch")
+        candidate = os.path.join(path_dir, "harness-dispatch")
         if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
             return candidate
     return None
 
 
-class TmuxBackend(SummariserBackend):
-    name = "tmux"
+class HerdrBackend(SummariserBackend):
+    name = "herdr"
 
     def __init__(
         self,
@@ -74,17 +74,17 @@ class TmuxBackend(SummariserBackend):
     def summarise_middle(
         self, transcript_path: str, *, profile: str | None = None
     ) -> list[ThreadItem]:
-        dispatch = find_tmux_dispatch(self.dispatch_path)
+        dispatch = find_harness_dispatch(self.dispatch_path)
         if dispatch is None:
             raise RuntimeError(
-                "tmux-dispatch not found. Install a compatible tmux-harness provider, set "
-                "BACKHAND_TMUX_DISPATCH, or pass --tmux-dispatch-path."
+                "harness-dispatch not found. Install a compatible herdr-harness provider, set "
+                "BACKHAND_HARNESS_DISPATCH, or pass --harness-dispatch-path."
             )
         transcript = Path(transcript_path).expanduser()
         if not transcript.exists():
             raise FileNotFoundError(f"Transcript not found: {transcript}")
 
-        with tempfile.TemporaryDirectory(prefix="backhand-tmux-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="backhand-herdr-") as tmp:
             prompt_path = Path(tmp) / "middle-synthesis.md"
             prompt_path.write_text(_prompt(transcript), encoding="utf-8")
             args = [
@@ -110,7 +110,7 @@ class TmuxBackend(SummariserBackend):
 
         if completed.returncode != 0:
             stderr = completed.stderr.strip()
-            raise RuntimeError(f"tmux-dispatch failed: {stderr or 'no stderr'}")
+            raise RuntimeError(f"harness-dispatch failed: {stderr or 'no stderr'}")
 
         return _parse_summary(completed.stdout)
 
@@ -156,7 +156,7 @@ def _parse_summary(output: str) -> list[ThreadItem]:
         payload = json.loads(body)
         return ThreadSummary.model_validate(payload).items
     except (json.JSONDecodeError, ValidationError, ValueError) as exc:
-        raise ValueError("tmux-dispatch returned invalid backhand summary JSON") from exc
+        raise ValueError("harness-dispatch returned invalid backhand summary JSON") from exc
 
 
 def _strip_json_fence(output: str) -> str:
@@ -176,4 +176,4 @@ def _extract_json_object(output: str) -> str:
         except json.JSONDecodeError:
             continue
         return output[index : index + end]
-    raise ValueError("tmux-dispatch returned no JSON object")
+    raise ValueError("harness-dispatch returned no JSON object")

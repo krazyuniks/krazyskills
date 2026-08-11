@@ -31,7 +31,7 @@ re-expand from.
 ### Division of labour
 
 - Deterministic (no model): front-matter, head (copied), tail (copied), assembly, file write.
-- Model (one call): the middle excerpt only. The tmux backend drops command-wrapper turns, the
+- Model (one call): the middle excerpt only. The herdr backend drops command-wrapper turns, the
   copied head/tail zones, and verbose tool-result blobs before dispatch, which bounds cost and keeps
   the head and tail genuinely deterministic.
 
@@ -60,7 +60,7 @@ The current working slice supports:
 
 - Claude Code JSONL transcripts as the session source.
 - deterministic extraction of head, tail, compact tool traces, title, model, cwd, and git branch
-- tmux-dispatch as the middle-synthesis backend
+- harness-dispatch as the middle-synthesis backend
 - reproducible checks through uv, ruff, pyright, pytest, and skill validation
 
 The Codex, Pi, Gemini, subagent, and API adapters are explicit contracts or planned adapters. They are
@@ -76,7 +76,7 @@ domain/      Pydantic models (Handoff, FrontMatter, ThreadItem) + pure rendering
 ports/       SessionSource, SummariserBackend  (abstract)
 adapters/
   sources/     claude_jsonl, codex, pi, gemini      -> implement SessionSource
-  summarisers/ subagent, tmux, api                  -> implement SummariserBackend
+  summarisers/ subagent, herdr, api                  -> implement SummariserBackend
 app/         HandoffService orchestrates: resolve -> extract head/tail -> summarise middle
              -> assemble -> render -> write -> return path
 config.py    Pydantic Config (storage dir, default profile, backend selection)
@@ -95,20 +95,20 @@ Produce the itemised middle from a scoped transcript excerpt. Backend choice is 
 different users can require subscription-backed local tooling, in-session subagents, or an explicit
 metered API path.
 
-- `tmux` is implemented. It shells out to `tmux-dispatch --harness ... --prompt-file ...`, asks for a
+- `herdr` is implemented. It shells out to `harness-dispatch --harness ... --prompt-file ...`, asks for a
   JSON response, extracts the first JSON object from noisy harness output, validates that response
-  with Pydantic, and returns `ThreadItem` models. `tmux-dispatch` is resolved from explicit config,
-  `BACKHAND_TMUX_DISPATCH`, or `PATH`; it is not bundled with this repo.
+  with Pydantic, and returns `ThreadItem` models. `harness-dispatch` is resolved from explicit config,
+  `BACKHAND_HARNESS_DISPATCH`, or `PATH`; it is not bundled with this repo.
 - `subagent` is a planned host-driven backend for tools that can spawn a summariser agent inside the
   current session.
 - `api` is a planned backend for users who explicitly want a metered API path.
 
 "One skill calling another" happens at the model layer; at the code layer the reuse of
-`tmux-harness` is this adapter calling the CLI that skill exposes.
+`herdr-harness` is this adapter calling the CLI that skill exposes.
 
 ## Backend choice depends on invocation context
 
-The default config uses `tmux`, because that is the working non-metered backend. `subagent` and `api`
+The default config uses `herdr`, because that is the working non-metered backend. `subagent` and `api`
 raise explicit not-implemented errors until their adapters are wired.
 
 ## Settled decisions
@@ -127,7 +127,7 @@ raise explicit not-implemented errors until their adapters are wired.
 
 ## Prerequisites
 
-UV is required. tmux and `tmux-dispatch` are required for the tmux backend. The `bin/backhand`
+UV is required. herdr and `harness-dispatch` are required for the herdr backend. The `bin/backhand`
 preflight checks local prerequisites and instructs the user on any gap; it never auto-installs and
 never runs `sudo`.
 

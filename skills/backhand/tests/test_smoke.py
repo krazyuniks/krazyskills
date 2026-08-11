@@ -9,7 +9,7 @@ from backhand import cli
 from backhand.adapters.sources.claude_jsonl import ClaudeJsonlSource, compact_middle_text
 from backhand.adapters.summarisers.api import ApiBackend
 from backhand.adapters.summarisers.subagent import SubagentBackend
-from backhand.adapters.summarisers.tmux import TmuxBackend, find_tmux_dispatch
+from backhand.adapters.summarisers.herdr import HerdrBackend, find_harness_dispatch
 from backhand.app.service import HandoffService
 from backhand.config import Config
 from backhand.domain.models import FrontMatter, Handoff, ItemKind, ThreadItem
@@ -181,12 +181,12 @@ def test_config_loads_toml(tmp_path: Path) -> None:
         '\n'.join(
             [
                 'storage_dir = "~/handoffs"',
-                'backend = "tmux"',
-                'tmux_dispatch_path = "/opt/bin/tmux-dispatch"',
+                'backend = "herdr"',
+                'harness_dispatch_path = "/opt/bin/harness-dispatch"',
                 'default_profile = "gpt-5.5"',
-                'tmux_harness = "codex"',
-                'tmux_effort = "high"',
-                'tmux_timeout_s = 1200',
+                'harness_profile = "codex"',
+                'harness_effort = "high"',
+                'harness_timeout_s = 1200',
             ]
         ),
         encoding="utf-8",
@@ -195,14 +195,14 @@ def test_config_loads_toml(tmp_path: Path) -> None:
     config = Config.load(config_path)
 
     assert config.storage_dir == Path.home() / "handoffs"
-    assert config.tmux_dispatch_path == "/opt/bin/tmux-dispatch"
+    assert config.harness_dispatch_path == "/opt/bin/harness-dispatch"
     assert config.default_profile == "gpt-5.5"
-    assert config.tmux_effort == "high"
-    assert config.tmux_timeout_s == 1200
+    assert config.harness_effort == "high"
+    assert config.harness_timeout_s == 1200
 
 
-def test_tmux_backend_parses_dispatch_json(tmp_path: Path) -> None:
-    dispatch = tmp_path / "tmux-dispatch"
+def test_herdr_backend_parses_dispatch_json(tmp_path: Path) -> None:
+    dispatch = tmp_path / "harness-dispatch"
     dispatch.write_text("#!/bin/sh\n", encoding="utf-8")
     dispatch.chmod(0o755)
     transcript = tmp_path / "session.jsonl"
@@ -253,7 +253,7 @@ def test_tmux_backend_parses_dispatch_json(tmp_path: Path) -> None:
             stderr="",
         )
 
-    backend = TmuxBackend(
+    backend = HerdrBackend(
         dispatch_path=str(dispatch),
         harness="codex",
         effort="high",
@@ -266,17 +266,17 @@ def test_tmux_backend_parses_dispatch_json(tmp_path: Path) -> None:
     assert items == [ThreadItem(kind=ItemKind.decision, statement="Use a port")]
 
 
-def test_tmux_dispatch_resolves_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("BACKHAND_TMUX_DISPATCH", "/bin/sh")
+def test_harness_dispatch_resolves_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BACKHAND_HARNESS_DISPATCH", "/bin/sh")
 
-    assert find_tmux_dispatch() == "/bin/sh"
+    assert find_harness_dispatch() == "/bin/sh"
 
 
-def test_tmux_dispatch_has_no_private_path_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("BACKHAND_TMUX_DISPATCH", raising=False)
+def test_harness_dispatch_has_no_private_path_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("BACKHAND_HARNESS_DISPATCH", raising=False)
     monkeypatch.setenv("PATH", "/tmp/backhand-empty-path")
 
-    assert find_tmux_dispatch() is None
+    assert find_harness_dispatch() is None
 
 
 def test_planned_backends_raise_explicit_contract_errors() -> None:
@@ -336,14 +336,14 @@ def test_cli_handoff_wires_overrides(
             "--first-prompt-hint",
             "original ask",
             "--backend",
-            "tmux",
+            "herdr",
             "--profile",
             "strong-model",
-            "--tmux-dispatch-path",
-            "/opt/tmux-dispatch",
-            "--tmux-harness",
+            "--harness-dispatch-path",
+            "/opt/harness-dispatch",
+                "--harness-profile",
             "codex",
-            "--tmux-effort",
+            "--harness-effort",
             "high",
             "--timeout",
             "1200",
@@ -353,12 +353,12 @@ def test_cli_handoff_wires_overrides(
     assert result == 0
     assert captured_config == Config(
         storage_dir=tmp_path,
-        backend="tmux",
+        backend="herdr",
         default_profile="strong-model",
-        tmux_dispatch_path="/opt/tmux-dispatch",
-        tmux_harness="codex",
-        tmux_effort="high",
-        tmux_timeout_s=1200,
+        harness_dispatch_path="/opt/harness-dispatch",
+        harness_profile="codex",
+        harness_effort="high",
+        harness_timeout_s=1200,
     )
     output_path = Path(capsys.readouterr().out.strip())
     assert output_path.parent == tmp_path
