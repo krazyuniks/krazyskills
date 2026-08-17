@@ -8,8 +8,8 @@ import pytest
 from backhand import cli
 from backhand.adapters.sources.claude_jsonl import ClaudeJsonlSource, compact_middle_text
 from backhand.adapters.summarisers.api import ApiBackend
-from backhand.adapters.summarisers.subagent import SubagentBackend
 from backhand.adapters.summarisers.herdr import HerdrBackend, find_harness_dispatch
+from backhand.adapters.summarisers.subagent import SubagentBackend
 from backhand.app.service import HandoffService
 from backhand.config import Config
 from backhand.domain.models import FrontMatter, Handoff, ItemKind, ThreadItem
